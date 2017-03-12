@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head %}
+	{{ super() }}
+	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}
+
+{% block content %}
+	<div class="plot z-depth-1 hoverable">
+		{{ html | safe }}
+		{% for result in results %}
+		<h6 style="font-style: italic;">{{ result }}</h6>
+		{% endfor %}
+		<!-- <ul class="collection">
+		{% for result in results %}
+			<li class="collection-item black-text">{{ result }}</li>
+		{% endfor %}
+	    </ul> -->
+	</div>
+{% endblock %}
+
+{% block style %}
+	{{ super() }}
+	.plot {
+	    border-radius: 6px;
+	   	overflow-x: scroll;
+	    margin-top: 60px;
+	    margin-bottom: 60px;
+	}    
+{% endblock %}

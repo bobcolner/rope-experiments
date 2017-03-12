@@ -1,0 +1,115 @@
+-- REC EVENTS
+drop table if exists bi.rec_events;
+create table bi.rec_events as (
+with allocations as (
+select distinct
+    site_id
+    , recset
+    , bsin
+    , namespace
+    , experiment
+    , case when namespace = 'popularexp' then json_extract_path_text(config, 'model')
+        when namespace = 'weightexp' then json_extract_path_text(config, 'weights') 
+        else 'otherexp' end as config
+    , event_time
+from recs.allocations
+where 
+    event_time >= getdate()::date - '{days_ago} day'::interval
+    and event_time >= '2016-08-20'
+), requests as (
+select
+    site_id
+    , medium
+    , caller
+    , campaign
+    , batch
+    , recset
+    , bsin
+    , event_time
+    , 'request' as event_type
+    , null as resource_feature_count
+    , null as source
+from recs.requests
+where 
+    event_time >= getdate()::date - '{days_ago} day'::interval
+    and event_time >= '2016-08-20'
+), served as (
+select distinct
+    s.site_id
+    , hr.medium
+    , hr.caller
+    , hr.campaign
+    , hr.batch
+    , s.recset
+    , s.bsin    
+    , s.event_time
+    , 'served' as event_type
+    , s.resource_feature_count
+    , s.source
+from recs.served as s
+left outer join requests as hr
+on(s.site_id = hr.site_id and s.recset = hr.recset)
+where
+    s.event_time >= getdate()::date - '{days_ago} day'::interval
+    and s.event_time >= '2016-08-20'
+), p13d as (
+select distinct
+    site_id
+    , bsin
+    , recset
+    , case when resource_feature_count > 0 then true 
+        when (resource_feature_count is null or resource_feature_count <= 0) then false 
+        end as identified
+    , case when source = 'fallback-cache' then true else false end as fallback_cache
+from served
+), interactions as (
+select
+    i.site_id
+    , hr.medium
+    , hr.caller
+    , hr.campaign
+    , hr.batch
+    , i.recset
+    , i.bsin
+    , i.event_time
+    , i.event_type
+    , null as resource_feature_count
+    , null as source
+from recs.interactions as i
+left outer join requests as hr
+on(i.site_id = hr.site_id and i.recset = hr.recset)
+where
+    i.event_time >= getdate()::date - '{days_ago} day'::interval
+    and i.event_time >= '2016-08-20'
+), unioned as (
+select * from requests
+union all
+select * from served
+union all
+select * from interactions
+)
+select
+    u.site_id
+    , u.medium
+    , u.caller
+    , u.campaign
+    , u.batch
+    , u.recset
+    , u.bsin
+    , u.event_time
+    , u.event_type
+    , p.identified
+    , p.fallback_cache
+    , case when (a.namespace is null and identified = true) then 'weightexp'
+        when (a.namespace is null and identified = false) then 'popularexp' 
+        else a.namespace end as namespace
+    , case when a.experiment is null then 'default-control' else a.experiment end as experiment
+    , case when a.config is null then 'default-control' else a.config end as config
+from unioned as u
+inner join p13d as p
+on(u.site_id = p.site_id and u.recset = p.recset)
+left outer join allocations as a
+on(u.site_id = a.site_id and u.recset = a.recset)
+);
+
+select true;

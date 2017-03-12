@@ -1,0 +1,41 @@
+drop table if exists metrics.osr_campaigns;
+create table metrics.osr_campaigns as (
+with requests as (
+select
+    site_id
+    , medium
+    , caller
+    , campaign
+    , batch
+    , recset
+from recs.requests
+where 
+    event_time >= getdate()::date - '30 day'::interval
+    and medium = 'web'
+), interactions as (
+select
+    i.site_id
+    , hr.medium
+    , hr.caller
+    , hr.campaign
+    , hr.batch
+    , i.recset
+    , i.bsin
+    , i.event_time
+    , i.event_type
+from recs.interactions as i 
+join requests as hr 
+on(i.site_id = hr.site_id and i.recset = hr.recset)
+where i.event_time >= getdate()::date - '30 day'::interval
+)
+select
+    site_id
+    , campaign
+    , date_trunc('hour', event_time) as event_time
+    , count(case when event_type='bt_rec_view' then 1 else null end) as total_view_count
+    , count(case when event_type='bt_rec_click' then 1 else null end) as total_click_count
+    , count(distinct case when event_type='bt_rec_view' then bsin else null end) as unq_view_count
+    , count(distinct case when event_type='bt_rec_click' then bsin else null end) as unq_click_count
+from interactions
+group by 1, 2, 3
+);

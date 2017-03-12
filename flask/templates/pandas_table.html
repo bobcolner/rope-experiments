@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="table-rap">
+    <title>{{ title }}</title>
+
+    <div class="grey lighten-5 black-text z-depth-1 hoverable">
+        <div class="header deep-orange darken-2">
+            <h2 class="white-text center-align">{{ title }}</h2>
+            <h5 class="white-text center-align">{{ subtitle }}</h5>
+        </div>
+        <table align="right" class="grey lighten-5 table z-depth-1 hoverable">
+            {{ data | safe }}
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+
+    {{ super() }}
+
+    table {
+        text-align: center;
+    }
+    .center { 
+        margin: 0px auto; 
+    }
+    .header {
+        padding: 10px;
+    }
+    tr:hover { 
+        background: #e0e0e0;
+    }
+    .table-rap {
+        overflow-x: scroll;
+        margin-top: 60px;
+        <!-- height: 70%; -->
+    }
+    
+{% endblock %}

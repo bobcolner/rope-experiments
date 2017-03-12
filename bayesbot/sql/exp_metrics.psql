@@ -1,0 +1,96 @@
+-- EXP METRICS
+drop table if exists bi.exp_timeseries;
+create table bi.exp_timeseries as (
+with hourly_counts as (
+select
+    site_id
+    , namespace
+    , experiment
+    , config
+    , date_trunc('hour', event_time) as event_time
+    , count(distinct case when event_type='request' then bsin else null end) as requests
+    , count(distinct case when event_type='served' then bsin else null end) as served
+    , count(case when event_type='bt_rec_view' then 1 else null end) as total_view
+    , count(distinct case when event_type='bt_rec_view' then bsin else null end) as unique_view
+    , count(case when event_type='bt_rec_click' then 1 else null end) as total_click
+    , count(distinct case when event_type='bt_rec_click' then bsin else null end) as unique_click
+from bi.rec_events
+where
+    fallback_cache = false
+    and case when (namespace = 'popularexp' and identified is false) then true 
+        when (namespace = 'weightexp' and identified is true) then true 
+        when namespace is null then true else false end
+group by 1, 2, 3, 4, 5
+), exp_start as (
+select
+    site_id
+    , namespace
+    , experiment
+    , min(event_time) as start_time
+from hourly_counts
+group by 1, 2, 3
+having sum(unique_view) > 99
+), sends as (
+select
+    site_id
+    , campaign
+    , batch
+    , min(date_trunc('hour', event_time)) as send_time
+from bi.rec_events
+where event_type = 'bt_rec_view'
+group by 1, 2, 3
+)
+select
+    hc.*
+    , datediff(hour, es.start_time, hc.event_time) as exp_hour
+    , case when s.send_time is not null then true else false end as send
+    , sum(requests) over (partition by hc.site_id, hc.namespace, hc.experiment, hc.config
+        order by hc.event_time rows unbounded preceding) as cumulative_requests
+    , sum(served) over (partition by hc.site_id, hc.namespace, hc.experiment, hc.config 
+        order by hc.event_time rows unbounded preceding) as cumulative_served
+    , sum(unique_view) over (partition by hc.site_id, hc.namespace, hc.experiment, hc.config 
+        order by hc.event_time rows unbounded preceding) as cumulative_viewed
+    , sum(unique_click) over (partition by hc.site_id, hc.namespace, hc.experiment, hc.config
+        order by hc.event_time rows unbounded preceding) as cumulative_clicked
+from hourly_counts as hc
+inner join exp_start as es
+on(hc.site_id = es.site_id and hc.namespace = es.namespace and hc.experiment = es.experiment)
+left outer join sends as s
+on(hc.site_id = s.site_id and hc.event_time = s.send_time)
+where datediff(hour, es.start_time, hc.event_time) <= 720 -- 1 Month Max
+);
+
+
+drop table if exists bi.exp_rollup;
+create table bi.exp_rollup as (
+select
+    site_id
+    , namespace
+    , experiment
+    , config
+    , min(event_time) as min_event_time
+    , max(event_time) as max_event_time
+    , sum(requests) as requests
+    , sum(served) as served
+    , sum(total_view) as total_view
+    , sum(unique_view) as unique_view
+    , sum(total_click) as total_click
+    , sum(unique_click) as unique_click
+from bi.exp_timeseries
+group by 1, 2, 3, 4
+);
+
+
+drop table if exists bi.exp_recent;
+create table bi.exp_recent as (
+select
+    site_id
+    , max(max_event_time) as latest
+    , sum(served) as users
+    , count(distinct experiment) as experiments 
+    , count(distinct config) as models
+from bi.exp_rollup
+group by 1
+);
+
+select true;

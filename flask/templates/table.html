@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="table-rap">
+    <title>{{ title }}</title>
+
+    <div class="blue lighten-1 black-text z-depth-1 hoverable">
+        <div class="header deep-orange">
+            <h2 class="white-text center-align">Recent Experiments</h2>
+            <h5 class="white-text center-align">Since 8/20</h5>
+        </div>
+        <table align="right" class="grey lighten-5 table z-depth-1 hoverable">
+            <thead>
+                <th class="center">Client</th>
+                <th class="center">Latest</th>
+                <th class="center">Users</th>
+                <th class="center">Experiments</th>
+                <th class="center">Models</th>
+            </thead>
+            <tbody>
+            {% for row in data %}
+                <tr>
+                    <td class="center"><a href="{{ url_for('client_exps', site_id=row['site_id']) }}"  class="waves-effect waves-light btn"><i class="material-icons left">business</i>{{ row['client'] }}</a></td>
+                    <td class="center">{{ row['latest'] }}</td>
+                    <td class="center">{{ row['users'] }}</td>
+                    <td class="center">{{ row['experiments'] }}</td>
+                    <td class="center">{{ row['models'] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+
+    {{ super() }}
+
+    table {
+        overflow-x: scroll;
+        text-align: center;
+    }
+    .center { 
+        margin: 0px auto; 
+    }
+    .header {
+        border-radius: 6px;
+        padding: 10px;
+    }
+    tr:hover { 
+        background: #e0e0e0;
+    }
+    .table-rap {        
+        margin-top: 60px;
+    }
+    
+{% endblock %}

@@ -1,0 +1,80 @@
+-- CAMPAIGN METRICS
+drop table if exists bi.campaign_timeseries;
+create table bi.campaign_timeseries as (
+with hourly_counts as (
+select
+    site_id
+    , campaign
+    , batch
+    , medium
+    , caller
+    , date_trunc('hour', event_time) as event_time
+    , count(distinct case when event_type='request' then bsin else null end) as requests
+    , count(distinct case when event_type='served' then bsin else null end) as served
+    , count(case when event_type='bt_rec_view' then 1 else null end) as total_view
+    , count(distinct case when event_type='bt_rec_view' then bsin else null end) as unique_view
+    , count(case when event_type='bt_rec_click' then 1 else null end) as total_click
+    , count(distinct case when event_type='bt_rec_click' then bsin else null end) as unique_click
+from bi.rec_events
+group by 1, 2, 3, 4, 5, 6
+), batch_start as (
+select
+    site_id
+    , campaign
+    , batch
+    , min(event_time) as start_time
+from hourly_counts
+group by 1, 2, 3
+having sum(unique_view) > 99
+)
+select
+    hc.*
+    , datediff(hour, bs.start_time, hc.event_time) as batch_hour
+    , sum(requests) over (partition by hc.site_id, hc.campaign, hc.batch
+        order by hc.event_time rows unbounded preceding) as cumulative_requests
+    , sum(served) over (partition by hc.site_id, hc.campaign, hc.batch 
+        order by hc.event_time rows unbounded preceding) as cumulative_served
+    , sum(unique_view) over (partition by hc.site_id, hc.campaign, hc.batch 
+        order by hc.event_time rows unbounded preceding) as cumulative_viewed
+    , sum(unique_click) over (partition by hc.site_id, hc.campaign, hc.batch
+        order by hc.event_time rows unbounded preceding) as cumulative_clicked
+from hourly_counts as hc
+inner join batch_start as bs
+on(hc.site_id = bs.site_id and hc.campaign = bs.campaign and hc.batch = bs.batch)
+);
+
+
+drop table if exists bi.campaign_rollup;
+create table bi.campaign_rollup as (
+select
+    site_id
+    , campaign
+    , batch
+    , medium
+    , caller
+    , min(event_time) as min_event_time
+    , max(event_time) as max_event_time
+    , sum(requests) as requests
+    , sum(served) as served
+    , sum(total_view) as total_view
+    , sum(unique_view) as unique_view
+    , sum(total_click) as total_click
+    , sum(unique_click) as unique_click
+from bi.campaign_timeseries
+group by 1, 2, 3, 4, 5
+);
+
+
+drop table if exists bi.campaign_recent;
+create table bi.campaign_recent as (
+select
+    site_id
+    , max(max_event_time) as latest
+    , sum(served) as users
+    , count(distinct campaign) as campaigns
+    , count(distinct batch) as batchs
+from bi.campaign_rollup
+group by 1
+);
+
+select true;

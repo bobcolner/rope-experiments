@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block head %}
+	{{ super() }}
+	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}
+
+{% block content %}
+    {% for div_html in graphs %}
+        <div class="plot z-depth-1 hoverable">
+        	{{ div_html | safe }}
+    		<a class="btn-floating btn-large waves-effect waves-light deep-orange fab" href="{{ url_for('exp_timeseries', site_id=names[loop.index-1][0], namespace=names[loop.index-1][1], experiment=names[loop.index-1][2]) }}"><i class="material-icons right">trending_up</i></a>    		
+    	</div>
+    {% endfor %}
+{% endblock %}
+
+{% block style %}
+	{{ super() }}
+	.plot {
+	    border-radius: 6px;
+	   	overflow-x: scroll;
+	    margin-top: 60px;
+	    margin-bottom: 60px;
+	}    
+	.fab {
+		position: absolute;
+	    left: 90%;
+	}
+	.fab:hover { 
+        background: #e0e0e0;
+    }
+{% endblock %}

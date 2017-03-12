@@ -1,0 +1,71 @@
+<!doctype html>
+
+<html>    
+
+<head>
+    {% block head %}
+    <!--favicon-->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Compiled and minified Materalize JavaScript -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/js/materialize.min.js"></script>
+    <!--Import minified materialize.css-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/css/materialize.min.css">
+    <!--Material Design Icons-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--  Plot.ly -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    {% endblock %}
+</head>
+
+<body class="blue lighten-1 white-text">
+
+<header class="navbar-fixed">
+    {% block header %}
+    <nav class="blue lighten-1" role="navigation">
+        <div class="nav-wrapper left-align main">
+            <a id="logo-container" href="{{ url_for('index') }}" class="brand-logo">
+                <i class="large material-icons">insert_chart</i>Experiments</a>
+          <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="material-icons">menu</i></a>        
+        </div>
+    </nav>
+    {% endblock %}
+</header>
+
+<main class="main">
+    {% block content %}{% endblock %}
+</main>
+
+<footer></footer>
+
+{% block scripts %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $('.button-collapse').sideNav();
+    $('ul.tabs').tabs();
+    $('.datepicker').pickadate({
+        selectMonths: true, // Creates a dropdown to control month
+        selectYears: 10 // Creates a dropdown of 15 years to control year
+    });
+});
+</script>
+{% endblock %}
+
+</body>
+
+<style type="text/css">
+{% block style %}
+    html {
+        font-family: monospace;
+    }
+    .main {
+        width: 90%;
+        margin: auto;
+    }
+    footer {
+        margin-top: 40px;
+    }
+{% endblock %}
+</style>
+
+</html>
